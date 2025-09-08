@@ -89,3 +89,57 @@ class OutConv(nn.Module):
     def forward(self, x):
         return self.conv(x)
 
+
+class UNet(nn.Module):
+    def __init__(self, n_channels, n_classes, 
+                 depth=4, base_channels=64, 
+                 norm_layer=nn.BatchNorm2d, activation=nn.ReLU(inplace=False)):
+        super(UNet, self).__init__()
+
+        self.n_channels = n_channels
+        self.n_classes = n_classes
+        self.depth = depth
+
+        # Encoder
+        self.inc = DoubleConv(n_channels, base_channels, norm_layer, activation)
+        self.downs = nn.ModuleList()
+        channels = base_channels
+        for _ in range(depth):
+            self.downs.append(Down(channels, channels*2, norm_layer, activation))  # spatial // 2, channels * 2
+            channels *= 2
+
+        # Bottleneck
+        self.bottleneck = DoubleConv(channels, channels*2, norm_layer, activation)
+
+        # Decoder
+        self.ups = nn.ModuleList()
+        for _ in range(depth):
+            self.ups.append(Up(channels*2, channels//2, norm_layer=norm_layer, activation=activation))
+            channels //= 2
+
+        # Output
+        self.outc = OutConv(base_channels, n_classes)
+
+    def forward(self, x):
+        x_skip = []
+
+        # Encoder
+        x1 = self.inc(x)
+        x_skip.append(x1)
+        x_temp = x1
+        for down in self.downs:
+            x_temp = down(x_temp)
+            x_skip.append(x_temp)
+
+        # Bottleneck
+        x_temp = self.bottleneck(x_temp)
+
+        # Decoder
+        for up in self.ups:
+            skip = x_skip.pop()  # picking skip connection from the end of the list
+            x_temp = up(x_temp, skip)
+
+        # Output
+        logits = self.outc(x_temp)
+        return logits
+
