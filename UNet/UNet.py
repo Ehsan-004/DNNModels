@@ -3,7 +3,7 @@ import torch.nn as nn
 
 
 class DoubleConv(nn.Module):
-    def __init__(self, in_channels, out_channels, 
+    def __init__(self, in_channels, out_channels,
                  norm_layer=nn.BatchNorm2d, 
                  activation=nn.ReLU(inplace=True)):
         super(DoubleConv, self).__init__()
@@ -49,15 +49,27 @@ class Up(nn.Module):
                  up_mode='upconv', 
                  norm_layer=nn.BatchNorm2d, 
                  activation=nn.ReLU(inplace=False)):
+        """_summary_
+
+        Args:
+            in_channels (int): number of 
+            out_channels (int): _description_
+            up_mode (str, optional): _description_. Defaults to 'upconv'.
+            norm_layer (_type_, optional): _description_. Defaults to nn.BatchNorm2d.
+            activation (_type_, optional): _description_. Defaults to nn.ReLU(inplace=False).
+
+        Raises:
+            ValueError: _description_
+        """
         super(Up, self).__init__()
 
         if up_mode == 'upconv':
-            self.up = nn.ConvTranspose2d(in_channels // 2, in_channels // 2, kernel_size=2, stride=2)
+            self.up = nn.ConvTranspose2d(in_channels, in_channels, kernel_size=2, stride=2)
             # devided by 2 because of concatenate
         elif up_mode == 'interp':
             self.up = nn.Sequential(
                 nn.Upsample(scale_factor=2, mode='bilinear', align_corners=True),
-                nn.Conv2d(in_channels // 2, in_channels // 2, kernel_size=1)
+                nn.Conv2d(in_channels, in_channels, kernel_size=1)
             )
         else:
             raise ValueError("up_mode should be 'upconv' or 'interp'")
